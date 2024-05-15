@@ -10,3 +10,10 @@
 - trojan-server：`in:trojan` + `out:raw`
 
 > 积极开发中，优先实现 ipt2socks，并支持 socks4 传出，然后是 tlsproxy 协议、trojan-tproxy 客户端。
+
+# 设计目标
+
+- Linux only
+- 高性能，尽可能零拷贝，减少系统调用
+- 低资源开销，即便是低端路由器也能流畅运行
+- 支持条件编译，避免对不需要的协议支付相关成本
