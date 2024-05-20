@@ -1,0 +1,20 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "intelliSenseMode": "linux-clang-x64",
+            "compilerPath": "/usr/bin/clang",
+            "compilerArgs": [
+                "-I${workspaceFolder}/dep/wolfssl-5.7.0-stable"
+            ],
+            "defines": [
+                "TEST",
+                "MUSL",
+                "ENABLE_WOLFSSL"
+            ],
+            "cStandard": "c11",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 4
+}

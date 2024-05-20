@@ -1,0 +1,11 @@
+{
+    "build_options": [
+        {
+            "name": "mode",
+            "value": "debug"
+        },
+        {
+            "name": "wolfssl"
+        }
+    ]
+}

@@ -1,0 +1,23 @@
+pub const name_list = .{ "DynStr", "EvLoop", "ListNode", "Rc", "StrList", "c", "cc", "co", "flags_op", "fmtchk", "g", "log", "main", "modules", "net", "opt", "sentinel_vector", "server", "str2int", "tests" };
+pub const module_list = .{ DynStr, EvLoop, ListNode, Rc, StrList, c, cc, co, flags_op, fmtchk, g, log, main, modules, net, opt, sentinel_vector, server, str2int, tests };
+
+const DynStr = @import("DynStr.zig");
+const EvLoop = @import("EvLoop.zig");
+const ListNode = @import("ListNode.zig");
+const Rc = @import("Rc.zig");
+const StrList = @import("StrList.zig");
+const c = @import("c.zig");
+const cc = @import("cc.zig");
+const co = @import("co.zig");
+const flags_op = @import("flags_op.zig");
+const fmtchk = @import("fmtchk.zig");
+const g = @import("g.zig");
+const log = @import("log.zig");
+const main = @import("main.zig");
+const modules = @import("modules.zig");
+const net = @import("net.zig");
+const opt = @import("opt.zig");
+const sentinel_vector = @import("sentinel_vector.zig");
+const server = @import("server.zig");
+const str2int = @import("str2int.zig");
+const tests = @import("tests.zig");
