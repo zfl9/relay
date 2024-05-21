@@ -18,7 +18,15 @@ var _target: CrossTarget = undefined;
 var _mode: BuildMode = undefined;
 var _lto: bool = undefined;
 var _strip: bool = undefined;
-var _enable_wolfssl: bool = undefined;
+var _in_tproxy: bool = undefined;
+var _in_socks: bool = undefined;
+var _in_tlsproxy: bool = undefined;
+var _in_trojan: bool = undefined;
+var _out_raw: bool = undefined;
+var _out_socks: bool = undefined;
+var _out_tlsproxy: bool = undefined;
+var _out_trojan: bool = undefined;
+var _wolfssl: bool = undefined;
 var _wolfssl_noasm: bool = undefined;
 var _exe_name: []const u8 = undefined;
 
@@ -69,6 +77,14 @@ fn init(b: *Builder) void {
     option_mode();
     option_lto();
     option_strip();
+    option_in_tproxy();
+    option_in_socks();
+    option_in_tlsproxy();
+    option_in_trojan();
+    option_out_raw();
+    option_out_socks();
+    option_out_tlsproxy();
+    option_out_trojan();
     option_wolfssl();
     option_wolfssl_noasm();
     option_name(); // must be at the end
@@ -82,10 +98,18 @@ fn init(b: *Builder) void {
     // conditional compilation for zig source files
     _build_opts = _b.addOptions();
     _build_opts.addOption(bool, "is_test", _test);
+    _build_opts.addOption(bool, "in_tproxy", _in_tproxy);
+    _build_opts.addOption(bool, "in_socks", _in_socks);
+    _build_opts.addOption(bool, "in_tlsproxy", _in_tlsproxy);
+    _build_opts.addOption(bool, "in_trojan", _in_trojan);
+    _build_opts.addOption(bool, "out_raw", _out_raw);
+    _build_opts.addOption(bool, "out_socks", _out_socks);
+    _build_opts.addOption(bool, "out_tlsproxy", _out_tlsproxy);
+    _build_opts.addOption(bool, "out_trojan", _out_trojan);
+    _build_opts.addOption(bool, "wolfssl", _wolfssl);
+    _build_opts.addOption([]const u8, "wolfssl_version", _dep_wolfssl.version);
     _build_opts.addOption([]const u8, "version", app_version);
     _build_opts.addOption([]const u8, "commit_id", get_commit_id());
-    _build_opts.addOption(bool, "enable_wolfssl", _enable_wolfssl);
-    _build_opts.addOption([]const u8, "wolfssl_version", _dep_wolfssl.version);
     _build_opts.addOption([]const u8, "target", desc_target());
     _build_opts.addOption([]const u8, "cpu", desc_cpu());
     _build_opts.addOption([]const u8, "mode", desc_mode(null));
@@ -138,8 +162,40 @@ fn option_strip() void {
     _strip = _b.option(bool, "strip", "strip debug info, default to true if in fast/small mode") orelse default;
 }
 
+fn option_in_tproxy() void {
+    _in_tproxy = _b.option(bool, "in.tproxy", "enable in.tproxy protocol, default: true") orelse true;
+}
+
+fn option_in_socks() void {
+    _in_socks = _b.option(bool, "in.socks", "enable in.socks protocol, default: true") orelse true;
+}
+
+fn option_in_tlsproxy() void {
+    _in_tlsproxy = _b.option(bool, "in.tlsproxy", "enable in.tlsproxy protocol, default: true") orelse true;
+}
+
+fn option_in_trojan() void {
+    _in_trojan = _b.option(bool, "in.trojan", "enable in.trojan protocol, default: true") orelse true;
+}
+
+fn option_out_raw() void {
+    _out_raw = _b.option(bool, "out.raw", "enable out.raw protocol, default: true") orelse true;
+}
+
+fn option_out_socks() void {
+    _out_socks = _b.option(bool, "out.socks", "enable out.socks protocol, default: true") orelse true;
+}
+
+fn option_out_tlsproxy() void {
+    _out_tlsproxy = _b.option(bool, "out.tlsproxy", "enable out.tlsproxy protocol, default: true") orelse true;
+}
+
+fn option_out_trojan() void {
+    _out_trojan = _b.option(bool, "out.trojan", "enable out.trojan protocol, default: true") orelse true;
+}
+
 fn option_wolfssl() void {
-    _enable_wolfssl = _b.option(bool, "wolfssl", "enable wolfssl to support SSL/TLS, default: false") orelse false;
+    _wolfssl = _in_trojan or _out_tlsproxy or _out_trojan;
 }
 
 fn option_wolfssl_noasm() void {
@@ -154,13 +210,6 @@ fn option_name() void {
         vec.appendSlice("test") catch unreachable
     else
         vec.appendSlice("relay") catch unreachable;
-
-    if (_enable_wolfssl) {
-        vec.appendSlice("+wolfssl") catch unreachable;
-
-        if (_wolfssl_noasm)
-            vec.appendSlice("_noasm") catch unreachable;
-    }
 
     const default = with_target_desc(vec.items, null);
     const desc = fmt("executable name, default: '{s}'", .{default});
@@ -774,7 +823,7 @@ fn add_app_objs(app_exe: *LibExeObjStep) void {
         if (is_musl())
             obj.defineCMacroRaw("MUSL");
 
-        if (_enable_wolfssl) {
+        if (_wolfssl) {
             obj.defineCMacroRaw("ENABLE_WOLFSSL");
             obj.addIncludePath(_dep_wolfssl.include_dir);
         }
@@ -789,14 +838,14 @@ fn configure() void {
     const exe = new_exe(_exe_name);
 
     // build the dependency library first
-    if (_enable_wolfssl)
+    if (_wolfssl)
         exe.step.dependOn(build_wolfssl());
 
     // src/main.zig, src/*.c
     add_app_objs(exe);
 
     // link the dependency library
-    if (_enable_wolfssl) {
+    if (_wolfssl) {
         exe.addLibraryPath(_dep_wolfssl.lib_dir);
         exe.linkSystemLibrary("wolfssl");
     }

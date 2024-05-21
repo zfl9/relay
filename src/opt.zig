@@ -26,15 +26,29 @@ const version: cc.ConstStr = b: {
 
     var prefix: [:0]const u8 = "relay " ++ build_opts.version ++ " " ++ build_opts.commit_id;
 
-    if (build_opts.enable_wolfssl)
-        prefix = prefix ++ " | wolfssl-" ++ build_opts.wolfssl_version;
+    if (build_opts.wolfssl)
+        prefix = prefix ++ " | wolfssl " ++ build_opts.wolfssl_version;
 
-    break :b std.fmt.comptimePrint("{s} | target:{s} | cpu:{s} | mode:{s} | {s}", .{
+    var in_protos: [:0]const u8 = "in_protos:";
+    if (build_opts.in_tproxy) in_protos = in_protos ++ " tproxy";
+    if (build_opts.in_socks) in_protos = in_protos ++ " socks";
+    if (build_opts.in_tlsproxy) in_protos = in_protos ++ " tlsproxy";
+    if (build_opts.in_trojan) in_protos = in_protos ++ " trojan";
+
+    var out_protos: [:0]const u8 = "out_protos:";
+    if (build_opts.out_raw) out_protos = out_protos ++ " raw";
+    if (build_opts.out_socks) out_protos = out_protos ++ " socks";
+    if (build_opts.out_tlsproxy) out_protos = out_protos ++ " tlsproxy";
+    if (build_opts.out_trojan) out_protos = out_protos ++ " trojan";
+
+    break :b std.fmt.comptimePrint("{s}\n{s}\n{s}\ntarget: {s}\ncpu: {s}\nmode: {s}\n{s}", .{
         prefix,
+        in_protos,
+        out_protos,
         build_opts.target,
         build_opts.cpu,
         build_opts.mode,
-        "<https://github.com/zfl9/relay>",
+        "https://github.com/zfl9/relay",
     });
 };
 
