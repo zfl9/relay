@@ -24,10 +24,8 @@ const version: cc.ConstStr = b: {
     if (!std.mem.startsWith(u8, build_opts.cpu, cpu_model))
         @compileError("cpu-model mismatch: " ++ cpu_model ++ " != " ++ build_opts.cpu);
 
-    var prefix: [:0]const u8 = "relay " ++ build_opts.version ++ " " ++ build_opts.commit_id;
-
-    if (build_opts.wolfssl)
-        prefix = prefix ++ " | wolfssl " ++ build_opts.wolfssl_version;
+    var version_info: [:0]const u8 = "relay " ++ build_opts.version ++ " " ++ build_opts.commit_id;
+    if (build_opts.wolfssl) version_info = version_info ++ " | wolfssl " ++ build_opts.wolfssl_version;
 
     var in_protos: [:0]const u8 = "in_protos:";
     if (build_opts.in_tproxy) in_protos = in_protos ++ " tproxy";
@@ -42,7 +40,7 @@ const version: cc.ConstStr = b: {
     if (build_opts.out_trojan) out_protos = out_protos ++ " trojan";
 
     break :b std.fmt.comptimePrint("{s}\n{s}\n{s}\ntarget: {s}\ncpu: {s}\nmode: {s}\n{s}", .{
-        prefix,
+        version_info,
         in_protos,
         out_protos,
         build_opts.target,
