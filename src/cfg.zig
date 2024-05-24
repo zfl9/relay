@@ -4,30 +4,30 @@ const cc = @import("cc.zig");
 const g = @import("g.zig");
 const in = @import("in.zig");
 const out = @import("out.zig");
-const cfg_global = @import("cfg_global.zig");
+const Config = @import("Config.zig");
 const log = @import("log.zig");
 const str2int = @import("str2int.zig");
+const flags_op = @import("flags_op.zig");
 const assert = std.debug.assert;
 
-// ========================================================================
+const SectionType = enum { global, in, out };
 
-pub const Define = struct {
-    name: []const u8,
-    func: std.meta.FnPtr(fn (in_value: ?[]const u8) void),
-    value: enum { required, optional, no_value },
-};
-
-fn get_def(defines: []const Define, name: []const u8) ?Define {
-    for (defines) |def| {
-        if (std.mem.eql(u8, def.name, name))
-            return def;
+fn load_config(start: [*]const u8, end: [*]const u8, section_type: SectionType, proto_name: []const u8) void {
+    const section = start[0..cc.ptrdiff_u(u8, end, start)];
+    switch (section_type) {
+        .global => {
+            g.config = Config.load(section) orelse cc.exit(1);
+        },
+        .in => {
+            g.in_config = in.load_config(proto_name, section) orelse cc.exit(1);
+        },
+        .out => {
+            g.out_config = out.load_config(proto_name, section) orelse cc.exit(1);
+        },
     }
-    return null;
 }
 
-// ========================================================================
-
-pub fn parse(filename: cc.ConstStr) void {
+pub fn load(filename: cc.ConstStr) void {
     const src = @src();
 
     const mem = cc.mmap_file(filename) orelse {
@@ -36,51 +36,81 @@ pub fn parse(filename: cc.ConstStr) void {
     };
     defer _ = cc.munmap(mem);
 
-    var defines: []const Define = &cfg_global.defines;
+    const Loaded = enum(u8) {
+        global = 1 << 0,
+        in = 1 << 1,
+        out = 1 << 2,
+        _,
+        pub usingnamespace flags_op.get(@This());
+    };
+    var loaded: Loaded = Loaded.empty();
+    defer {
+        if (!loaded.has_all(.{ .in, .out })) {
+            const missing = cc.b2s(!loaded.has(.in), "in", "out");
+            log.err(src, "missing %s.proto config", .{missing});
+            cc.exit(1);
+        }
+        if (!loaded.has(.global))
+            g.config = Config.load("").?;
+    }
 
-    var line_it = std.mem.split(u8, mem, "\n");
+    var section_start: ?[*]const u8 = null; // the start pos of the content
+    var section_type: SectionType = undefined;
+    var proto_name: []const u8 = undefined; // in or out
+    defer if (section_start) |start|
+        load_config(start, mem.ptr + mem.len, section_type, proto_name);
+
+    var line_it = std.mem.tokenize(u8, mem, "\r\n");
     while (line_it.next()) |line| {
         const err: cc.ConstStr = e: {
+            var it = std.mem.tokenize(u8, line, " \t");
+
             // # comments
-            // [global]
+            // [global] # comments
             // [in.tproxy]
             // [out.socks]
-            // name [value]
-            var it = std.mem.tokenize(u8, line, " \t\r");
+            // name = value # comments
+            // name = "string"
+            const token = it.next() orelse continue;
 
-            const name = it.next() orelse continue;
-            const value = it.next();
-
-            if (it.next() != null)
-                break :e "too many values";
-
-            switch (name[0]) {
+            switch (token[0]) {
                 '#' => continue,
+
                 '[' => {
-                    if (name[name.len - 1] != ']') {
+                    if (token[token.len - 1] != ']')
                         break :e "invalid format";
-                    } else if (std.mem.eql(u8, name, "[global]")) {
-                        defines = &cfg_global.defines;
-                    } else if (std.mem.startsWith(u8, name, "[in.")) {
-                        const proto = name[4 .. name.len - 1];
-                        defines = in.get_cfg_defines(proto) orelse break :e "unknown proto";
-                    } else if (std.mem.startsWith(u8, name, "[out.")) {
-                        const proto = name[5 .. name.len - 1];
-                        defines = out.get_cfg_defines(proto) orelse break :e "unknown proto";
+
+                    const rest = it.rest();
+                    if (rest.len > 0 and rest[0] != '#')
+                        break :e "invalid format";
+
+                    // handle the last section
+                    if (section_start) |start|
+                        load_config(start, token.ptr, section_type, proto_name);
+
+                    // advance to the next section
+                    section_start = token.ptr + token.len;
+                    if (std.mem.eql(u8, token, "[global]")) {
+                        section_type = .global;
+                        proto_name = undefined;
+                        if (loaded.has(.global)) break :e "duplicate global section";
+                        loaded.add(.global);
+                    } else if (std.mem.startsWith(u8, token, "[in.")) {
+                        section_type = .in;
+                        proto_name = token[4 .. token.len - 1];
+                        if (loaded.has(.in)) break :e "duplicate in.proto section";
+                        loaded.add(.in);
+                    } else if (std.mem.startsWith(u8, token, "[out.")) {
+                        section_type = .out;
+                        proto_name = token[5 .. token.len - 1];
+                        if (loaded.has(.out)) break :e "duplicate out.proto section";
+                        loaded.add(.out);
                     } else {
                         break :e "unknown section";
                     }
                 },
-                else => {
-                    const def = get_def(defines, name) orelse
-                        break :e "unknown config";
-                    switch (def.value) {
-                        .required => if (value == null) break :e "missing value",
-                        .no_value => if (value != null) break :e "unexpected value",
-                        .optional => {},
-                    }
-                    def.func(value);
-                },
+
+                else => if (section_start == null) break :e "out of section",
             }
 
             continue;

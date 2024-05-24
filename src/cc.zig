@@ -34,12 +34,21 @@ pub const ConstStr = [*:0]const u8;
 
 // ==============================================================
 
+pub fn comptime_tostr(comptime value: anytype) [:0]const u8 {
+    return std.fmt.comptimePrint("{}", .{value});
+}
+
 /// remove const qualification of pointer `ptr`
 /// TODO: zig 0.11 has @constCast()
 pub inline fn remove_const(ptr: anytype) RemoveConst(@TypeOf(ptr)) {
-    if (comptime isSlice(@TypeOf(ptr)))
-        return remove_const(ptr.ptr)[0..ptr.len];
-    return @intToPtr(RemoveConst(@TypeOf(ptr)), @ptrToInt(ptr));
+    const P = @TypeOf(ptr);
+    if (comptime isSlice(P)) {
+        return if (comptime meta.sentinel(P)) |sentinel|
+            remove_const(ptr.ptr)[0..ptr.len :sentinel]
+        else
+            remove_const(ptr.ptr)[0..ptr.len];
+    }
+    return @intToPtr(RemoveConst(P), @ptrToInt(ptr));
 }
 
 /// remove const qualification of pointer type `T`

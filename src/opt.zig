@@ -64,6 +64,6 @@ pub fn parse() void {
             cc.printf("%s\n", .{help});
         cc.exit(0);
     } else {
-        cfg.parse(arg);
+        cfg.load(arg);
     }
 }

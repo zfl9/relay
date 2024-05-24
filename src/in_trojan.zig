@@ -1,16 +1,20 @@
 const cfg_loader = @import("cfg_loader.zig");
 const cfg_checker = @import("cfg_checker.zig");
-const g = @import("g.zig");
+const log = @import("log.zig");
 
-pub const NAME = "tproxy";
+pub const NAME = "trojan";
 
 pub const Config = struct {
     ip: []const [:0]const u8 = &.{},
-    port: u16 = 60080,
+    port: u16 = 443,
     tcp: bool = true,
     udp: bool = true,
 
     pub fn load(content: []const u8) ?Config {
+        if (true) {
+            log.err(@src(), "TODO: support in.trojan proto", .{});
+            return null;
+        }
         var self = Config{};
         const src = @src();
         cfg_loader.load(src, &self, content) orelse return null;
@@ -22,10 +26,9 @@ pub const Config = struct {
     }
 
     fn set_default_value(self: *Config) void {
-        if (self.ip.len == 0) {
+        if (self.ip.len == 0)
             self.ip = opaque {
-                const ips = &.{"127.0.0.1"};
+                const ips = &.{"0.0.0.0"};
             }.ips;
-        }
     }
 };
