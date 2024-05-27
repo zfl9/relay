@@ -4,6 +4,8 @@ const cfg_checker = @import("cfg_checker.zig");
 pub const NAME = "raw";
 
 pub const Config = struct {
+    _: bool = true,
+
     pub fn load(content: []const u8) ?Config {
         var self = Config{};
         const src = @src();
