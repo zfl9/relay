@@ -18,6 +18,7 @@ var _target: CrossTarget = undefined;
 var _mode: BuildMode = undefined;
 var _lto: bool = undefined;
 var _strip: bool = undefined;
+var _enable_all: bool = undefined;
 var _in_tproxy: bool = undefined;
 var _in_socks: bool = undefined;
 var _in_tlsproxy: bool = undefined;
@@ -77,6 +78,7 @@ fn init(b: *Builder) void {
     option_mode();
     option_lto();
     option_strip();
+    option_all();
     option_in_tproxy();
     option_in_socks();
     option_in_tlsproxy();
@@ -88,6 +90,12 @@ fn init(b: *Builder) void {
     option_wolfssl();
     option_wolfssl_noasm();
     option_name(); // must be at the end
+
+    // at least one protocol must be enabled
+    if (!_in_tproxy and !_in_socks and !_in_tlsproxy and !_in_trojan)
+        err_invalid("at least one in.proto must be enabled", .{});
+    if (!_out_raw and !_out_socks and !_out_tlsproxy and !_out_trojan)
+        err_invalid("at least one out.proto must be enabled", .{});
 
     _dep_wolfssl.base_dir = with_target_desc(_dep_wolfssl.src_dir, .ReleaseFast); // dependency lib always ReleaseFast
     if (_wolfssl_noasm)
@@ -162,36 +170,40 @@ fn option_strip() void {
     _strip = _b.option(bool, "strip", "strip debug info, default to true if in fast/small mode") orelse default;
 }
 
+fn option_all() void {
+    _enable_all = _b.option(bool, "all", "enable all protocols by default, default: true") orelse true;
+}
+
 fn option_in_tproxy() void {
-    _in_tproxy = _b.option(bool, "in.tproxy", "enable in.tproxy protocol, default: true") orelse true;
+    _in_tproxy = _b.option(bool, "in.tproxy", "enable in.tproxy protocol") orelse _enable_all;
 }
 
 fn option_in_socks() void {
-    _in_socks = _b.option(bool, "in.socks", "enable in.socks protocol, default: true") orelse true;
+    _in_socks = _b.option(bool, "in.socks", "enable in.socks protocol") orelse _enable_all;
 }
 
 fn option_in_tlsproxy() void {
-    _in_tlsproxy = _b.option(bool, "in.tlsproxy", "enable in.tlsproxy protocol, default: true") orelse true;
+    _in_tlsproxy = _b.option(bool, "in.tlsproxy", "enable in.tlsproxy protocol") orelse _enable_all;
 }
 
 fn option_in_trojan() void {
-    _in_trojan = _b.option(bool, "in.trojan", "enable in.trojan protocol, default: true") orelse true;
+    _in_trojan = _b.option(bool, "in.trojan", "enable in.trojan protocol") orelse _enable_all;
 }
 
 fn option_out_raw() void {
-    _out_raw = _b.option(bool, "out.raw", "enable out.raw protocol, default: true") orelse true;
+    _out_raw = _b.option(bool, "out.raw", "enable out.raw protocol") orelse _enable_all;
 }
 
 fn option_out_socks() void {
-    _out_socks = _b.option(bool, "out.socks", "enable out.socks protocol, default: true") orelse true;
+    _out_socks = _b.option(bool, "out.socks", "enable out.socks protocol") orelse _enable_all;
 }
 
 fn option_out_tlsproxy() void {
-    _out_tlsproxy = _b.option(bool, "out.tlsproxy", "enable out.tlsproxy protocol, default: true") orelse true;
+    _out_tlsproxy = _b.option(bool, "out.tlsproxy", "enable out.tlsproxy protocol") orelse _enable_all;
 }
 
 fn option_out_trojan() void {
-    _out_trojan = _b.option(bool, "out.trojan", "enable out.trojan protocol, default: true") orelse true;
+    _out_trojan = _b.option(bool, "out.trojan", "enable out.trojan protocol") orelse _enable_all;
 }
 
 fn option_wolfssl() void {
