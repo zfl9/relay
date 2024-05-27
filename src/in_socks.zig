@@ -4,8 +4,7 @@ const cfg_checker = @import("cfg_checker.zig");
 pub const NAME = "socks";
 
 pub const Config = struct {
-    user: [:0]const u8 = "",
-    passwd: [:0]const u8 = "",
+    passwd: []const [:0]const u8 = &.{}, // "user passwd", "user passwd"
     ip: []const [:0]const u8 = &.{},
     port: u16 = 1080,
     tcp: bool = true,

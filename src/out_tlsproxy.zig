@@ -15,8 +15,8 @@ pub const Config = struct {
         var self = Config{};
         const src = @src();
         cfg_loader.load(src, &self, content) orelse return null;
-        cfg_checker.required_str(src, self.passwd, "passwd") orelse return null;
-        cfg_checker.required_str(src, self.server, "server") orelse return null;
+        cfg_checker.required(src, self.passwd.len > 0, "passwd") orelse return null;
+        cfg_checker.required(src, self.server.len > 0, "server") orelse return null;
         cfg_checker.check_port(src, self.port) orelse return null;
         cfg_checker.check_tcp_udp(src, self.tcp, self.udp) orelse return null;
         self.set_default_value();

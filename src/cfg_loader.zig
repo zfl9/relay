@@ -64,7 +64,7 @@ fn load_field(comptime Config: type, config: *Config, name: []const u8, value: [
     inline for (std.meta.fields(Config)) |field| {
         if (std.mem.eql(u8, field.name, name)) {
             const p_field = &@field(config, field.name);
-            p_field.* = parse(Config, field, p_field.*, value) orelse return "invalid value";
+            p_field.* = parse_value(Config, field, p_field.*, value) orelse return "invalid value";
             return null; // no error
         }
     }
@@ -72,7 +72,7 @@ fn load_field(comptime Config: type, config: *Config, name: []const u8, value: [
 }
 
 /// return new value (or null if failed)
-fn parse(
+fn parse_value(
     comptime Config: type,
     comptime field: std.builtin.Type.StructField,
     old_value: field.field_type,
@@ -110,8 +110,8 @@ fn parse(
 
                 break :b parse_str(old_value, cfg_value);
             } else {
-                // slice/array: []T, []const T
-                break :b parse_into_slice(info.child, old_value, cfg_value);
+                // slice: []T, []const T
+                break :b parse_slice(info.child, old_value, cfg_value);
             }
         },
 
@@ -119,38 +119,8 @@ fn parse(
     };
 }
 
-fn parse_bool(cfg_value: []const u8) ?bool {
-    if (std.mem.eql(u8, cfg_value, "true"))
-        return true;
-    if (std.mem.eql(u8, cfg_value, "false"))
-        return false;
-    return null;
-}
-
-fn parse_int(comptime T: type, cfg_value: []const u8) ?T {
-    return str2int.parse(T, cfg_value, 10);
-}
-
-fn parse_str(in_old_str: [:0]const u8, cfg_value: []const u8) ?[:0]u8 {
-    const old_str = cc.remove_const(in_old_str);
-    assert(cfg_value.len > 0);
-
-    // replace old content
-    const new_str = if (old_str.len > 0 and g.allocator.resize(old_str.ptr[0 .. old_str.len + 1], cfg_value.len + 1) != null)
-        old_str.ptr[0 .. cfg_value.len + 1]
-    else b: {
-        if (old_str.len > 0) g.allocator.free(old_str);
-        break :b g.allocator.alloc(u8, cfg_value.len + 1) catch unreachable;
-    };
-
-    @memcpy(new_str.ptr, cfg_value.ptr, cfg_value.len);
-    new_str[cfg_value.len] = 0;
-
-    return new_str[0..cfg_value.len :0];
-}
-
 /// ignore duplicate elements (so it's actually a hashset)
-fn parse_into_slice(comptime T: type, old_slice: []const T, cfg_value: []const u8) ?[]T {
+fn parse_slice(comptime T: type, old_slice: []const T, cfg_value: []const u8) ?[]T {
     comptime var is_string = false;
 
     const value_to_add = (switch (@typeInfo(T)) {
@@ -188,4 +158,34 @@ fn parse_into_slice(comptime T: type, old_slice: []const T, cfg_value: []const u
         value_to_add;
 
     return new_slice;
+}
+
+fn parse_bool(cfg_value: []const u8) ?bool {
+    if (std.mem.eql(u8, cfg_value, "true"))
+        return true;
+    if (std.mem.eql(u8, cfg_value, "false"))
+        return false;
+    return null;
+}
+
+fn parse_int(comptime T: type, cfg_value: []const u8) ?T {
+    return str2int.parse(T, cfg_value, 10);
+}
+
+fn parse_str(in_old_str: [:0]const u8, cfg_value: []const u8) ?[:0]u8 {
+    const old_str = cc.remove_const(in_old_str);
+    assert(cfg_value.len > 0);
+
+    // replace old content
+    const new_str = if (old_str.len > 0 and g.allocator.resize(old_str.ptr[0 .. old_str.len + 1], cfg_value.len + 1) != null)
+        old_str.ptr[0 .. cfg_value.len + 1]
+    else b: {
+        if (old_str.len > 0) g.allocator.free(old_str);
+        break :b g.allocator.alloc(u8, cfg_value.len + 1) catch unreachable;
+    };
+
+    @memcpy(new_str.ptr, cfg_value.ptr, cfg_value.len);
+    new_str[cfg_value.len] = 0;
+
+    return new_str[0..cfg_value.len :0];
 }

@@ -3,8 +3,8 @@ const cc = @import("cc.zig");
 const log = @import("log.zig");
 const SourceLocation = std.builtin.SourceLocation;
 
-pub fn required_str(comptime src: SourceLocation, str: [:0]const u8, name: cc.ConstStr) ?void {
-    if (str.len == 0) {
+pub fn required(comptime src: SourceLocation, exists: bool, name: cc.ConstStr) ?void {
+    if (!exists) {
         log.err(src, "missing config: '%s'", .{name});
         return null;
     }

@@ -3,7 +3,7 @@ const cfg_checker = @import("cfg_checker.zig");
 
 const Config = @This();
 
-ca_certs: [:0]u8 = "",
+ca_certs: [:0]const u8 = "",
 cert_verify: bool = false,
 reuse_port: bool = false,
 verbose: bool = false,
