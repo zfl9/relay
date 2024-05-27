@@ -6,21 +6,37 @@ const cc = @import("cc.zig");
 const g = @import("g.zig");
 
 const modules = b: {
-    const all_modules = .{
-        @import("out_raw.zig"),
-        @import("out_socks.zig"),
-        @import("out_tlsproxy.zig"),
-        @import("out_trojan.zig"),
-    };
-    var array: [all_modules.len]type = undefined;
-    var n = 0;
-    for (all_modules) |mod| {
-        if (@field(build_opts, "out_" ++ mod.NAME)) {
-            array[n] = mod;
-            n += 1;
+    const s = struct {
+        const all_modules = .{
+            @import("out_raw.zig"),
+            @import("out_socks.zig"),
+            @import("out_tlsproxy.zig"),
+            @import("out_trojan.zig"),
+        };
+        fn is_enable(comptime mod: type) bool {
+            return @field(build_opts, "out_" ++ mod.NAME);
         }
-    }
-    break :b array[0..n];
+        fn len() comptime_int {
+            var n = 0;
+            for (all_modules) |mod| {
+                if (is_enable(mod))
+                    n += 1;
+            }
+            return n;
+        }
+        fn fill(comptime list: []type) void {
+            var n = 0;
+            for (all_modules) |mod| {
+                if (is_enable(mod)) {
+                    list[n] = mod;
+                    n += 1;
+                }
+            }
+        }
+    };
+    var array: [s.len()]type = undefined;
+    s.fill(&array);
+    break :b array;
 };
 
 pub const Config = b: {

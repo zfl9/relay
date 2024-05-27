@@ -1,6 +1,5 @@
 const cfg_loader = @import("cfg_loader.zig");
 const cfg_checker = @import("cfg_checker.zig");
-const log = @import("log.zig");
 
 pub const NAME = "trojan";
 
